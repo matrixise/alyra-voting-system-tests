@@ -57,96 +57,7 @@ Because I use viem, we have to define SOLIDITY_COVERAGE on the CLI
 SOLIDITY_COVERAGE=true npx hardhat coverage
 ```
 
-![Code Coverage](alyra-voting-system-tests.gif)
-
 ```text
-env SOLIDITY_COVERAGE=true npx hardhat coverage
-
-Version
-=======
-> solidity-coverage: v0.8.14
-
-Instrumenting for coverage...
-=============================
-
-> Voting.sol
-
-Compilation:
-============
-
-Nothing to compile
-
-Network Info
-============
-> HardhatEVM: v2.22.18
-> network:    hardhat
-
-
-
-  Voting system
-    Deployment
-      ✔ Should set the right owner
-      ✔ Should start with the workflow status: RegisteringVoters
-    Workflow transitions
-      ✔ Should respect the workflow state transitions
-    Voter Management
-      ✔ Should allow only the owner to add voters
-      ✔ Should emit VoterRegistered event when adding a voter
-      ✔ Should prevent adding a voter twice
-      ✔ Should not add a voter during the proposal registering session
-      Get Voter
-        ✔ Should get a voter by a voter (voter does not exist)
-        ✔ Should get a voter by a voter (voter does exist)
-        ✔ Should not be called by the owner
-    Proposal Management
-      Start Proposals Registering Session
-        ✔ Only the owner can start the session
-        ✔ Should emit WorkflowStatusChange event when start Proposals Registering
-        ✔ Can't open the proposals session if the workflow has not the correct status
-      End Proposals Registering Session
-        ✔ Only the owner can end the session
-        ✔ Receive an event when we end the session
-        ✔ Should close the proposal session only if we are in ProposalsRegistrationStarted
-      Add Proposal - Check the workflow status
-        ✔ Should be reverted if the status is not ProposalsRegistrationStarted
-      Add Proposal
-        ✔ Only a proposal with a valid description
-        ✔ Only voter can add a proposal
-        ✔ addProposal emits an event
-        ✔ Admin can't add a proposal
-        ✔ Only voters can read a proposal
-        ✔ Non-voter receive a rejected message, when tries to read a proposal
-    Votes
-      Start the session
-        ✔ A non-admin can't start the voting session (fail)
-        ✔ Can't start the voting session if are not in the right workflow status (fail)
-        Start the session
-          ✔ Admin can start the voting session
-          ✔ Add a GENESIS proposal
-          ✔ Emit a Workflow event
-      Stop the session
-        ✔ A non-admin can't stop the voting session (fail)
-        ✔ Admin can stop the voting session
-        ✔ Receive a WorkflowStatusChange event
-        ✔ Can't stop the voting session if not in the right phase of workflow
-      Voting Session
-        ✔ The voting session is not yet started
-        ✔ An admin can't vote
-        ✔ Only voter can vote
-        ✔ Emit a Voted event
-        ✔ A voter can only vote one time
-        ✔ A vote is only on an existing proposal
-        Tally Votes
-          ✔ A non-admin can't call the function
-          ✔ An admin can call the function
-          ✔ emits a WorkflowStatusChange event
-          ✔ should be equal to 2
-          ✔ Require WorkflowStatus.VotingSessionEnded
-          ✔ Require WrokflowStatus.VotingSessionEnded
-
-
-  44 passing (458ms)
-
 -------------|----------|----------|----------|----------|----------------|
 File         |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovered Lines |
 -------------|----------|----------|----------|----------|----------------|
@@ -159,6 +70,8 @@ All files    |      100 |      100 |      100 |      100 |                |
 > Istanbul reports written to ./coverage/ and ./coverage.json
 ```
 
+![Code Coverage](alyra-voting-system-tests.gif)
+
 ## Run the Github Actions with act
 
 Install `act` from https://github.com/nektos/act
@@ -169,3 +82,106 @@ act --container-architecture linux/amd64
 ```
 
 ![Github Actions with Act](alyra-voting-system-tests-act.gif)
+
+
+## About the tests
+
+This test suite ensures that the **Voting Smart Contract** functions correctly by covering all critical aspects, including **deployment, workflow transitions, voter management, proposal submission, voting, and tallying votes**.
+
+## **1️⃣ Deployment Tests**
+### **📌 Purpose**
+- Ensure the contract **deploys correctly**.
+- Verify that the **owner** is properly assigned.
+- Confirm that the **initial workflow status** is `RegisteringVoters`.
+
+### **✅ Expected Behavior**
+✔ The contract **owner should match** the address that deployed it.
+✔ The contract should **start in the `RegisteringVoters` phase**.
+
+
+## **2️⃣ Workflow Transitions**
+### **📌 Purpose**
+- Ensure the contract **follows the correct sequence** of workflow phases.
+- Prevent **incorrect state transitions**.
+
+### **✅ Expected Behavior**
+✔ The contract should transition **sequentially** through these phases:
+   - `RegisteringVoters` → `ProposalsRegistrationStarted`
+   - `ProposalsRegistrationStarted` → `ProposalsRegistrationEnded`
+   - `ProposalsRegistrationEnded` → `VotingSessionStarted`
+   - `VotingSessionStarted` → `VotingSessionEnded`
+   - `VotingSessionEnded` → `VotesTallied`
+✔ Any **attempt to skip or repeat phases should fail**.
+
+---
+
+## **3️⃣ Voter Management**
+### **📌 Purpose**
+- Ensure that **only the contract owner** can register voters.
+- Prevent **duplicate registrations**.
+- Ensure **voters cannot be added after the proposal phase begins**.
+- Verify that **events are correctly emitted** when a voter is added.
+
+### **✅ Expected Behavior**
+✔ **Only the owner** can add voters; **other accounts should be rejected**.
+✔ A **voter cannot be added twice**.
+✔ Once **proposal registration starts**, **no more voters can be registered**.
+✔ When a voter is registered, the **`VoterRegistered` event should be emitted**.
+
+---
+
+## **4️⃣ Proposal Management**
+### **📌 Purpose**
+- Ensure that **only registered voters** can submit proposals.
+- Prevent **empty proposals**.
+- Verify that **proposals can only be added during the correct workflow phase**.
+- Ensure that **proposal submission events are correctly emitted**.
+
+### **✅ Expected Behavior**
+✔ **Only voters** can submit proposals; **other accounts should be rejected**.
+✔ A proposal **must have a valid description** (cannot be empty).
+✔ **Proposal submission is only allowed** during the `ProposalsRegistrationStarted` phase.
+✔ When a proposal is registered, the **`ProposalRegistered` event should be emitted**.
+
+---
+
+## **5️⃣ Voting Process**
+### **📌 Purpose**
+- Ensure that **only registered voters** can vote.
+- Prevent **multiple votes from the same voter**.
+- Ensure that **votes must be cast on existing proposals**.
+- Verify that **events are correctly emitted upon voting**.
+
+### **✅ Expected Behavior**
+✔ **Only registered voters** can vote; **others should be rejected**.
+✔ A voter **can only vote once**; **a second attempt should fail**.
+✔ A vote **must be cast on an existing proposal**; **invalid proposal IDs should be rejected**.
+✔ When a vote is cast, the **`Voted` event should be emitted**.
+
+---
+
+## **6️⃣ Tallying Votes**
+### **📌 Purpose**
+- Ensure that **only the contract owner** can tally votes.
+- Confirm that the **workflow reaches the final phase**.
+- Ensure that the **winning proposal is determined correctly**.
+- Verify that **the `WorkflowStatusChange` event is emitted** after tallying votes.
+
+### **✅ Expected Behavior**
+✔ **Only the owner** can tally votes; **other accounts should be rejected**.
+✔ **Votes should be counted**, and the proposal with the **most votes should be marked as the winner**.
+✔ The **workflow should transition to `VotesTallied`** after counting.
+✔ The **`WorkflowStatusChange` event should be emitted** when the voting session ends.
+
+---
+
+## **📌 Summary of What the Tests Ensure**
+| **Test Category**       | **What It Verifies** |
+|------------------------|----------------------|
+| **Deployment**        | Contract initializes correctly with the right owner and workflow state. |
+| **Workflow Transitions** | The contract progresses through the phases in the correct order. |
+| **Voter Management**  | Only the owner can register voters; no duplicate registrations; voters cannot be added after proposals start. |
+| **Proposal Management** | Only voters can add proposals; empty proposals are rejected; submission occurs in the correct phase. |
+| **Voting Process**     | Only voters can vote; one vote per person; votes must be valid; events are emitted properly. |
+| **Tallying Votes**     | Only the owner can tally votes; the correct proposal is chosen as the winner; workflow transitions to final phase. |
+
