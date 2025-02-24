@@ -41,13 +41,15 @@ describe('Voting system', function () {
       assert.equal(await sc.read.owner(), getAddress(owner.account!.address));
     });
 
-    it('Workflow: Check if status is RegisteringVoters', async function () {
-      const workflowStatus = await sc.read.workflowStatus();
-      assert.equal(workflowStatus, WorkflowStatus.RegisteringVoters);
+    it('Should start with the workflow status: RegisteringVoters', async function () {
+      assert.equal(
+        await sc.read.workflowStatus(),
+        WorkflowStatus.RegisteringVoters,
+      );
     });
   });
 
-  describe('Workflow', function () {
+  describe('Workflow transitions', function () {
     it('Should respect the workflow state transitions', async function () {
       // WorkflowStatus.RegisteringVoters
       expect(await sc.read.workflowStatus()).to.equal(
@@ -86,29 +88,16 @@ describe('Voting system', function () {
     });
   });
 
-  describe('Voters', function () {
-    it('Workflow: Check if status is RegisteringVoters', async function () {
-      const workflowStatus = await sc.read.workflowStatus();
-      assert.equal(workflowStatus, WorkflowStatus.RegisteringVoters);
-    });
-    it('Non-owner cannot add voters (expected to fail)', async function () {
+  describe('Voter Management', function () {
+    it('Should allow only the owner to add voters', async function () {
       await expect(
         sc.write.addVoter([addr1.account!.address], { account: addr2.account }),
       ).to.be.rejectedWith('OwnableUnauthorizedAccount');
-    });
 
-    it('Owner should be able to add a voter (expected to pass)', async function () {
       await sc.write.addVoter([addr1.account!.address]);
     });
 
-    it('Owner should not be able to add an existing voter', async function () {
-      await sc.write.addVoter([addr1.account!.address]);
-      await expect(
-        sc.write.addVoter([addr1.account!.address]),
-      ).to.be.rejectedWith('Already registered');
-    });
-
-    it('Should receive an event when we add a voter', async function () {
+    it('Should emit VoterRegistered event when adding a voter', async function () {
       await sc.write.addVoter([addr1.account!.address]);
 
       const events = await sc.getEvents.VoterRegistered();
@@ -117,6 +106,14 @@ describe('Voting system', function () {
         events[0].args.voterAddress,
         getAddress(addr1.account!.address),
       );
+    });
+
+    it('Should prevent adding a voter twice', async function () {
+      await sc.write.addVoter([addr1.account!.address]);
+
+      await expect(
+        sc.write.addVoter([addr1.account!.address]),
+      ).to.be.rejectedWith('Already registered');
     });
 
     it('Should not add a voter during the proposal registering session', async function () {
@@ -156,7 +153,6 @@ describe('Voting system', function () {
       });
 
       it('Should get a voter by a voter (voter does exist)', async function () {
-        //   await sc.write.addVoter([addr1.account.address]);
         await sc.write.addVoter([addr2.account!.address]);
         const voter = await sc.read.getVoter([addr2.account!.address], {
           account: addr1.account!.address,
@@ -168,7 +164,6 @@ describe('Voting system', function () {
 
       // By the owner
       it('Should not be called by the owner', async function () {
-        //   await sc.write.addVoter([addr1.account.address]);
         await expect(
           sc.read.getVoter([addr1.account!.address]),
         ).to.be.rejectedWith("You're not a voter");
@@ -176,7 +171,7 @@ describe('Voting system', function () {
     });
   });
 
-  describe('Proposals', function () {
+  describe('Proposal Management', function () {
     describe('Start Proposals Registering Session', function () {
       it('Only the owner can start the session', async function () {
         // The user is not the owner -> Rejected
@@ -189,7 +184,7 @@ describe('Voting system', function () {
         // The user is the owner -> Accepted
         await sc.write.startProposalsRegistering();
       });
-      it('Receive an event when we start the session', async function () {
+      it('Should emit WorkflowStatusChange event when start Proposals Registering', async function () {
         // The user is the owner -> Accepted
         await sc.write.startProposalsRegistering();
         const events = await sc.getEvents.WorkflowStatusChange();
@@ -522,12 +517,6 @@ describe('Voting system', function () {
         });
 
         it('Require WorkflowStatus.VotingSessionEnded', async function () {
-          await expect(sc.write.tallyVotes()).to.be.rejectedWith(
-            'Current status is not voting session ended',
-          );
-        });
-
-        it('Require WrokflowStatus.VotingSessionEnded', async function () {
           await expect(sc.write.tallyVotes()).to.be.rejectedWith(
             'Current status is not voting session ended',
           );

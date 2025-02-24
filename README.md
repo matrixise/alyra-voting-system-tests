@@ -59,7 +59,7 @@ SOLIDITY_COVERAGE=true npx hardhat coverage
 
 ![Code Coverage](alyra-voting-system-tests.gif)
 
-```shell
+```text
 env SOLIDITY_COVERAGE=true npx hardhat coverage
 
 Version
